@@ -1,0 +1,547 @@
+---
+title: "Chapter 2 - Making Predictions"
+author: "Edneide Ramalho"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+    html_document:
+      highlight: textmate
+      logo: logo.png
+      theme: cerulean
+      number_sections: yes
+      toc: yes
+      toc_float:
+        collapsed: yes
+        smooth_scroll: no
+---
+
+```{r setting chunks, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Imports
+
+```{r packages and data}
+library(fst) # to read fst format
+library(tidyverse)
+
+# data
+taiwan_real_estate <- read_fst(
+  "taiwan_real_estate.fst",
+  columns = NULL,
+  from = 1,
+  to = NULL,
+  as.data.table = FALSE,
+  old_format = FALSE
+)
+
+glimpse(taiwan_real_estate)
+```
+
+*Extrapolating* means making predictions outside the range of observed data.
+
+# **Predicting house prices**
+
+Perhaps the most useful feature of statistical models like linear regression is that you can make predictions. That is, you specify values for each of the explanatory variables, feed them to the model, and you get a prediction for the corresponding response variable. The code flow is as follows.
+
+    explanatory_data <- tibble(
+      explanatory_var = some_values
+    )
+    explanatory_data %>%
+      mutate(
+        response_var = predict(model, explanatory_data)
+      )
+
+Here, you'll make predictions for the house prices in the Taiwan real estate dataset.
+
+`taiwan_real_estate` is available. The linear regression model of house price versus number of convenience stores is available as `mdl_price_vs_conv` (*print it and read the call to see how it was made*); and `dplyr` is loaded.
+
+-   Create a tibble of explanatory data, where the number of convenience stores, `n_convenience`, takes the integer values from zero to ten.
+
+```{r}
+mdl_price_vs_conv <- lm(formula = price_twd_msq ~ n_convenience, data = taiwan_real_estate)
+```
+
+```{r}
+# Create a tibble with n_convenience column from zero to ten
+explanatory_data <- tibble(n_convenience = 0:10)
+```
+
+-   Use the model `mdl_price_vs_conv` to make predictions from `explanatory_data`.
+
+```{r}
+# Use mdl_price_vs_conv to predict with explanatory_data
+predict(mdl_price_vs_conv, explanatory_data)
+```
+
+Create a tibble of predictions named `prediction_data`.
+
+-   Start with `explanatory_data`.
+
+-   Add an extra column, `price_twd_msq`, containing the predictions.
+
+```{r}
+prediction_data <- explanatory_data %>% 
+  mutate(
+    price_twd_msq = predict(
+      mdl_price_vs_conv, explanatory_data 
+      )
+    )
+```
+
+## **Visualizing predictions**
+
+The prediction data you calculated contains a column of explanatory variable values and a column of response variable values. That means you can plot it on the same scatter plot of response versus explanatory data values.
+
+`prediction_data` is available and `ggplot2` is loaded. The code for the scatter plot with linear trend line you drew in Chapter 1 is shown.
+
+-   Extend the plotting code to include the point predictions in `prediction_data`. Color the points yellow.
+
+```{r}
+# Add to the plot
+ggplot(taiwan_real_estate, aes(n_convenience, price_twd_msq)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  # Add a point layer of prediction data, colored yellow
+  geom_point(data = prediction_data, aes(n_convenience, price_twd_msq), color = "yellow") +
+  theme_bw()
+```
+
+Naturally, the predicted points lie on the trend line.
+
+# **The limits of prediction**
+
+In the last exercise you made predictions on some sensible, could-happen-in-real-life, situations. That is, the cases when the number of nearby convenience stores were between zero and ten. To test the limits of the model's ability to predict, try some impossible situations.
+
+Use the console to try predicting house prices from `mdl_price_vs_conv` when there are `-1` convenience stores. Do the same for `2.5` convenience stores. What happens in each case?
+
+`mdl_price_vs_conv` is available and `dplyr` is loaded.
+
+Create some impossible explanatory data. Define a tibble with one column, `n_convenience`, set to minus one, assigning to `minus_one`. Create another with `n_convenience` set to two point five, assigning to `two_pt_five`.
+
+```{r}
+# Define a tibble where n_convenience is -1
+minus_one <- tibble(n_convenience = -1)
+
+# Define a tibble where n_convenience is 2.5
+two_pt_five <- tibble(n_convenience = 2.5)
+```
+
+-   Try making predictions on your two impossible cases. What happens?
+
+```{r}
+predict(mdl_price_vs_conv, minus_one)
+```
+
+```{r}
+predict(mdl_price_vs_conv, two_pt_five)
+```
+
+Linear models don't know what is impossible in real life. That means that they can give you predictions that don't make any sense when applied to your data. You need to understand what your data means in order to determine whether a prediction is nonsense or not.
+
+# Working with model objects
+
+-   **coefficients()**
+
+`coefficients(model_name)`
+
+-   **fitted()**
+
+`fitted(modelo_name)`
+
+-   **residuals()**
+
+`residuals(modelo_name)`
+
+-   **summary()**
+
+`summary(modelo_name)`
+
+-   **tidy()**
+
+```{r, eval=FALSE}
+library(broom)
+
+tidy(model_name)
+```
+
+-   **augment()**
+
+```{r, eval=FALSE}
+augment(model_name)
+```
+
+-   **glance()**
+
+```{r, eval=FALSE}
+glance(model_name)
+```
+
+## Extracting model elements
+
+The variable returned by `lm()` that contains the model object has many elements. In order to perform further analysis on the model results, you need to extract the useful bits of it. The model coefficients, the fitted values, and the residuals are perhaps the most important bits of the linear model object.
+
+`mdl_price_vs_conv` is available.
+
+-   Print the coefficients of `mdl_price_vs_conv`.
+
+```{r}
+coefficients(mdl_price_vs_conv)
+```
+
+-   Print the fitted values of `mdl_price_vs_conv`.
+
+```{r}
+fitted(mdl_price_vs_conv)
+```
+
+-   Print the residuals of `mdl_price_vs_conv`.
+
+```{r}
+residuals(mdl_price_vs_conv)
+```
+
+-   Print a summary of `mdl_price_vs_conv`.
+
+```{r}
+summary(mdl_price_vs_conv)
+```
+
+## Manually predicting house prices
+
+You can manually calculate the predictions from the model coefficients. When making predictions in real life, it is better to use `predict()`, but doing this manually is helpful to reassure yourself that predictions aren't magic -- they are simply arithmetic.
+
+In fact, for a simple linear regression, the predicted value is just the intercept plus the slope times the explanatory variable.
+
+$response = intercept + slope ∗ explanatory$
+
+`mdl_price_vs_conv` and `explanatory_data` are available, and `dplyr` is loaded.
+
+-   Get the coefficients of `mdl_price_vs_conv`, assigning to `coeffs`.
+
+-   Get the intercept, which is the first element of `coeffs`, assigning to `intercept`.
+
+-   Get the slope, which is the second element of `coeffs`, assigning to `slope`.
+
+-   Manually predict `price_twd_msq` using the intercept, slope, and `n_convenience`.
+
+```{r}
+# Get the coefficients of mdl_price_vs_conv
+coeffs <- coefficients(mdl_price_vs_conv)
+
+# Get the intercept
+intercept <- coeffs[1]
+
+# Get the slope
+slope <- coeffs[2]
+
+explanatory_data %>% 
+  mutate(
+    # Manually calculate the predictions
+    price_twd_msq = intercept + slope *  n_convenience
+  )
+
+# Compare to the results from predict()
+predict(mdl_price_vs_conv, explanatory_data)
+```
+
+## Using `broom`
+
+Many programming tasks are easier if you keep all your data inside data frames. This is particularly true if you are a tidyverse fan, where `dplyr` and `ggplot2` require you to use data frames. The `broom` package contains functions that decompose models into three data frames: one for the coefficient-level elements (the coefficients themselves, as well as p-values for each coefficient), the observation-level elements (like fitted values and residuals), and the model-level elements (mostly performance metrics).
+
+The functions in `broom` are generic. That is, they work with many model types, not just linear regression model objects. They also work with logistic regression model objects (as you'll see in Chapter 4), and many other types of model.
+
+```{r}
+library(broom)
+```
+
+1.  Tidy the model to print the coefficient-level elements of `mdl_price_vs_conv`.
+
+```{r}
+tidy(mdl_price_vs_conv)
+```
+
+# Regression to the mean
+
+-   Response value = fitted value + residual
+
+-   **Regression to the mean** means extreme cases don't persist over time
+
+-   Example: Fathers and sons height:
+
+> Do tall fathers have tall sons?
+
+```{r}
+library(UsingR)
+data(father.son)
+father_son <- father.son %>% 
+  mutate(father_height_cm = fheight * 2.54,
+         son_height_cm = sheight * 2.54)
+```
+
+```{r}
+plt_son_vs_father <- ggplot(
+  father_son,
+  aes(father_height_cm, son_height_cm)
+) +
+  geom_point() +
+  geom_abline(color = "green", size = 1) +
+  coord_fixed()
+
+plt_son_vs_father
+```
+
+-   Adding regression line:
+
+```{r}
+plt_son_vs_father +
+  geom_smooth(mehod = "lm", se = FALSE)
+```
+
+-   Running a regression:
+
+```{r}
+mdl_son_vs_father <- lm(
+  son_height_cm ~ father_height_cm,
+  data = father_son
+)
+mdl_son_vs_father
+```
+
+-   Making predictions:
+
+```{r}
+really_tall_father <- tibble(
+  father_height_cm = 190
+)
+predict(mdl_son_vs_father, really_tall_father)
+```
+
+```{r}
+really_tall_father <- tibble(
+  father_height_cm = 150
+)
+predict(mdl_son_vs_father, really_tall_father)
+```
+
+```{r}
+churn <- read_fst(
+  "churn.fst",
+  columns = NULL,
+  from = 1,
+  to = NULL,
+  as.data.table = FALSE,
+  old_format = FALSE
+)
+
+```
+
+# Transforming Variables
+
+-   Sometimes, the relationship between the variables does not provide a straight line, so we need to transform the variables.
+
+-   We can transform both or just one of them.
+
+-   Data:
+
+```{r}
+library(rrcov)
+data(fish)
+
+perch <- fish %>% 
+  dplyr::filter(Species == 7) %>% 
+  dplyr::select(Weight, Length1)
+names(perch) <- c("mass_g", "length_cm")
+```
+
+-   Graph:
+
+```{r}
+ggplot(perch, aes(length_cm, mass_g)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+-   For this specific specie of fish, we can determine that it grows in three directions (because they are a bit fat) so we are going to transform the length to the power of 3.
+
+![](img/yellowPerch.jpeg){width="587"}
+
+```{r}
+ggplot(perch, aes(length_cm^3, mass_g)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+-   The line is fitted better now, so we can build a model.
+
+## Modeling mass vs. length cubed
+
+```{r}
+mdl_perch <- lm(mass_g ~ I(length_cm^3), data = perch)
+mdl_perch
+```
+
+-   I:`is`.
+
+## Predicting mass vs. length cubed
+
+```{r}
+explanatory_data <- tibble(
+  length_cm = seq(10, 40, 5)
+)
+```
+
+```{r}
+prediction_data <- explanatory_data %>% 
+  dplyr::mutate(
+    mass_g = predict(mdl_perch, explanatory_data)
+  )
+prediction_data
+```
+
+## Plotting mass vs. length cubed
+
+```{r}
+ggplot(perch, aes(length_cm^3, mass_g)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_point(data = prediction_data, color = "blue", size = 3)
+```
+
+-   As expected, the predicted blue points lie on the linear trend.
+
+-   Squared root is a good transformation when your data has a right-skewed distribution.
+
+## Exercises
+
+### Transforming the explanatory variable
+
+If there is no straight line relationship between the response variable and the explanatory variable, it is sometimes possible to create one by transforming one or both of the variables. Here, you'll look at transforming the explanatory variable.
+
+You'll take another look at the Taiwan real estate dataset, this time using the distance to the nearest MRT (metro) station as the explanatory variable. You'll use code to make every commuter's dream come true: shortening the distance to the metro station by taking the square root. Take that, geography!
+
+`taiwan_real_estate` is available and `ggplot2` and `tibble` are loaded.
+
+##### 
+
+-   *Run the code provided, and look at the plot.*
+
+-   Edit the plot so the x aesthetic is square root transformed.
+
+-   *Look at the new plot. Notice how the numbers on the x-axis have changed. This is a different line to what was shown before. Do the points track the line more closely?*
+
+```{r}
+# Run the code to see the plot
+# Edit so x-axis is square root of dist_to_mrt_m
+ggplot(taiwan_real_estate, aes(sqrt(dist_to_mrt_m), price_twd_msq)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+-   Run a linear regression of `price_twd_msq` versus the square root of `dist_to_mrt_m` using `taiwan_real_estate`.
+
+```{r}
+
+mdl_price_vs_dist <- lm(price_twd_msq ~ sqrt(dist_to_mrt_m),
+                        data = taiwan_real_estate)
+mdl_price_vs_dist
+```
+
+-   Create a data frame of prediction data named `prediction_data`. Start with `explanatory_data`, and add a column named after the response variable. Predict values using `mdl_price_vs_dist` and `explanatory_data`.
+
+```{r}
+explanatory_data <- tibble(
+  dist_to_mrt_m = seq(0, 80, 10)^2
+)
+
+prediction_data <- explanatory_data %>% 
+  dplyr::mutate(
+    price_twd_msq = predict(mdl_price_vs_dist, explanatory_data)
+  )
+
+prediction_data
+```
+
+-   Plot:
+
+```{r}
+ggplot(taiwan_real_estate, aes(sqrt(dist_to_mrt_m), price_twd_msq)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  # Add points from prediction_data, colored green, size 5
+  geom_point(data = prediction_data, aes(x = sqrt(dist_to_mrt_m), y = price_twd_msq),
+             color = 'green', size = 5)
+```
+
+### Transforming the response variable too
+
+The response variable can be transformed too, but this means you need an extra step at the end to undo that transformation. That is, you "back transform" the predictions.
+
+In the video, you saw the first step of the digital advertising workflow: spending money to buy ads, and counting how many people see them (the "impressions"). The next step is determining how many people click on the advert after seeing it.
+
+`ad_conversion` is available and `ggplot2` and `tibble` are loaded.
+
+##### 
+
+-   *Run the code provided, and look at the plot.*
+
+-   Edit the plot so the x and y aesthetics are transformed by raising them to the power `0.25`.
+
+-   *Look at the new plot. Do the points track the line more closely?*
+
+```{r}
+library(readr)
+ad_conversion <- read_csv("ad_conversion.csv")
+```
+
+```{r}
+# Run the code to see the plot
+ggplot(ad_conversion, aes(n_impressions, n_clicks)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+# Run the code to see the plot
+# Edit to raise x, y aesthetics to power 0.25
+ggplot(ad_conversion, aes(n_impressions^0.25, n_clicks^0.25)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+-   Run a linear regression of `n_clicks` to the power `0.25` versus `n_impressions` to the power `0.25` using `ad_conversion`. *Each variable in the formula needs to be specified "as is", using `I()`.*
+
+```{r}
+mdl_click_vs_impression <-  lm(I(n_clicks^0.25) ~ I(n_impressions^0.25), data = ad_conversion)
+mdl_click_vs_impression
+```
+
+-   Complete the code for the prediction data. Use `mdl_click_vs_impression` to predict `n_clicks` to the power `0.25` from `explanatory_data`.
+
+-   Back transform by raising `n_clicks_025` to the power `4` to get `n_clicks`.
+
+```{r}
+# Use this explanatory data
+explanatory_data <- tibble(
+  n_impressions = seq(0, 3e6, 5e5)
+)
+
+prediction_data <- explanatory_data %>% 
+  mutate(
+    # Use mdl_click_vs_impression to predict n_clicks ^ 0.25
+    n_clicks_025 = predict(mdl_click_vs_impression, explanatory_data),
+    # Back transform to get n_clicks
+    n_clicks = n_clicks_025^4
+  )
+```
+
+-   Edit the plot to add a layer of points from `prediction_data`, colored `"green"`.
+
+```{r}
+ggplot(ad_conversion, aes(n_impressions ^ 0.25, n_clicks ^ 0.25)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  # Add points from prediction_data, colored green
+  geom_point(data = prediction_data,
+             aes(n_impressions^0.25, n_clicks_025),
+             color = 'green')
+```

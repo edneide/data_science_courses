@@ -1,0 +1,602 @@
+---
+title: "Quantifying model fit"
+author: "Edneide Ramalho"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+    html_document:
+      highlight: textmate
+      logo: logo.png
+      theme: cerulean
+      number_sections: yes
+      toc: yes
+      toc_float:
+        collapsed: yes
+        smooth_scroll: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message = FALSE)
+```
+
+# Coefficient of determination
+
+```{r packages}
+library(tidyverse)
+library(rrcov)
+```
+
+```{r data}
+data(fish)
+fish <- fish
+```
+
+-   "r-squared" or "R-squared".
+
+> It's the proportion of the variance in the response variable that is predictable from the explanatory variable.
+
+-   $r^2$ = 1 -\> means a perfect fit
+
+-   $r^2$ = 0 -\> means the worst possible fit
+
+## `summary()`
+
+```{r}
+bream <- fish %>% 
+  dplyr::filter(Species == 1) %>% 
+  dplyr::select(Weight, Length1)
+
+names(bream) <- c("mass_g", "length_cm")
+```
+
+```{r}
+ggplot(bream, aes(length_cm, mass_g)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+```{r}
+mdl_bream <- lm(mass_g ~ length_cm, data = bream)
+summary(mdl_bream)
+```
+
+-   Another interesting function to get the model's metrics is `glance()` from `broom` package.
+
+## `glance()`
+
+```{r}
+library(broom)
+library(dplyr)
+mdl_bream %>% 
+  glance()  
+```
+
+-   r-squared
+
+```{r}
+mdl_bream %>% 
+  glance() %>% 
+  pull(r.squared) %>% 
+  round(2)
+```
+
+-\> r-squared is just correlation between the variables, squared.
+
+```{r}
+na.omit(bream) %>% 
+  dplyr::summarize(
+    coeff_determination = cor(length_cm, mass_g) ^ 2
+  )
+```
+
+## Residual standard error (RSE)
+
+> Difference between a prediction and an observed response.
+
+$$
+\text{RSE} = \sqrt{\dfrac{\sum_{i=1}^{n}(Y_i - \hat{Y_i})^2}{\text{df}}}
+$$
+
+-   The `summary()` function shows the RSE, called Residual standard error:
+
+*Residual standard error: 62.51 on 32 degrees of freedom*
+
+-   In the `glance()` function, RSE is named `sigma`
+
+```{r}
+mdl_bream %>% 
+  glance() %>% 
+  pull(sigma)
+```
+
+-   Interpreting RSE
+
+> **The difference between predicted masses and observed bream masses is typically about 62.5g.**
+
+## Root-mean-square error (RMSE)
+
+-   It is used for comparison between models.
+
+-   It is similar to RSE, but for RMSE we dived the sum of squared residuals by the number of observations.
+
+$$
+\text{RMSE} = \sqrt{\dfrac{\sum \text{residuals}^2}{n}}
+$$
+
+or
+
+$$
+\text{RMSE} = \sqrt{\dfrac{1}{n}\sum_{i=1}^n (y_i - \hat{y_i})^2}
+$$
+
+## Exercises
+
+### Coefficient of determination
+
+The coefficient of determination is a measure of how well the linear regression line fits the observed values. For simple linear regression, it is equal to the square of the correlation between the explanatory and response variables.
+
+Here, you'll take another look at the second stage of the advertising pipeline: modeling the click response to impressions. Two models are available: `mdl_click_vs_impression_orig` models `n_clicks` versus `n_impressions`. `mdl_click_vs_impression_trans` is the transformed model you saw in Chapter 2. It models `n_clicks ^ 0.25` versus `n_impressions ^ 0.25`.
+
+broom is loaded.
+
+-   Print a summary of `mdl_click_vs_impression_orig`. Do the same for `mdl_click_vs_impression_trans`.
+
+```{r}
+# 0. Packages
+library(broom)
+library(dplyr)
+library(readr)
+```
+
+```{r}
+ad_conversion <- read_csv("ad_conversion.csv")
+glimpse(ad_conversion)
+```
+
+-   Original model:
+
+```{r}
+mdl_click_vs_impression_orig <- lm(n_clicks ~ n_impressions, data = ad_conversion)
+summary(mdl_click_vs_impression_orig)
+```
+
+-   Transformed model:
+
+```{r}
+mdl_click_vs_impression_trans <- lm(I(n_clicks^0.25) ~ I(n_impressions^0.25), data = ad_conversion)
+summary(mdl_click_vs_impression_trans)
+```
+
+-   Get the coefficient of determination for mdl_click_vs_impression_orig by glancing at the model, then pulling the r.squared value.
+-   Do the same for mdl_click_vs_impression_trans.
+
+```{r}
+# Get coeff of determination for mdl_click_vs_impression_orig
+mdl_click_vs_impression_orig %>% 
+  # Get the model-level details
+  glance() %>% 
+  # Pull out r.squared
+  pull(r.squared)
+
+# Do the same for the transformed model
+mdl_click_vs_impression_trans %>% 
+  glance() %>% 
+  pull(r.squared)
+```
+
+-   The number of impressions explain 89% of the number of clicks variability for the original model.\
+-   The transformed model has a higher coefficient of determination that the original model, suggesting that it gives a better fit to the data.
+
+### Residual standard error
+
+Residual standard error (RSE) is a measure of the typical size of the residuals. Equivalently, it's a measure of how badly wrong you can expect predictions to be. Smaller numbers are better, with zero being a perfect fit to the data.
+
+Again, you'll look at the models from the advertising pipeline, `mdl_click_vs_impression_orig` and `mdl_click_vs_impression_trans`. broom is loaded.
+
+Get the residual standard error for `mdl_click_vs_impression_orig` by glancing at the model, then pulling the sigma value. Do the same for `mdl_click_vs_impression_trans`.
+
+```{r}
+mdl_click_vs_impression_orig %>% 
+  glance() %>% 
+  pull(sigma)
+```
+
+-   The typical difference between observed number of clicks and predicted number of clicks is `20`.
+
+```{r}
+mdl_click_vs_impression_trans %>% 
+  glance() %>% 
+  pull(sigma)
+```
+
+-   According to the RSE, the transformed model gives more accurate predictions.
+
+# Visualizing model fit
+
+## Residual properties
+
+-   Residual are normally distributed
+
+-   The mean of the residuals is zero
+
+-   We use some diagnostic plots to check the residuals:
+
+    -   Residual vs. fitted values
+
+    -   Q-Q plot
+
+    -   Scale-Location
+
+```{r, eval=FALSE}
+library(ggplot2)
+library(ggfortify)
+
+autoplot(model_object, which = ???)
+```
+
+-   Values for `which`
+
+    1.  residual vs. fitted values
+    2.  Q-Q plot
+    3.  scale-location
+
+```{r}
+library(rrcov)
+data(fish)
+
+perch <- fish %>% 
+  dplyr::filter(Species == 7) %>% 
+  dplyr::select(Weight, Length1)
+names(perch) <- c("mass_g", "length_cm")
+mdl_perch <- lm(mass_g ~ I(length_cm^3), data = perch)
+mdl_perch
+```
+
+```{r}
+library(ggplot2)
+library(ggfortify)
+autoplot(
+  mdl_perch,
+  which = 1:3,
+  nrow = 3,
+  ncol = 1
+)
+```
+
+## Exercises
+
+### Let's take a look at some diagnostic plots for the number of clicks model.
+
+-   **Residual vs Fitted**
+
+```{r}
+# Original model
+autoplot(
+  mdl_click_vs_impression_orig,
+  which = 1,
+  nrow = 1,
+  ncol = 1
+)
+
+# Transformed model
+autoplot(
+  mdl_click_vs_impression_trans,
+  which = 1,
+  nrow = 1,
+  ncol = 1
+)
+```
+
+-   In a good model, the residuals should have a trend line close to zero. It is the case in the transformed model.
+
+-   **Q-Q plot**
+
+```{r}
+# Original model
+autoplot(
+  mdl_click_vs_impression_orig,
+  which = 2,
+  nrow = 1,
+  ncol = 1
+)
+
+# Transformed model
+autoplot(
+  mdl_click_vs_impression_trans,
+  which = 2,
+  nrow = 1,
+  ncol = 1
+)
+```
+
+-   If the residuals from the model are normally distributed, then the points will track the line on the Q-Q plot. In this case, neither model is perfect, but the transformed model is closer.
+
+-   **Scale-Location**
+
+```{r}
+# Original model
+autoplot(
+  mdl_click_vs_impression_orig,
+  which = 3,
+  nrow = 1,
+  ncol = 1
+)
+
+# Transformed model
+autoplot(
+  mdl_click_vs_impression_trans,
+  which = 3,
+  nrow = 1,
+  ncol = 1
+)
+```
+
+-   The size of the standardized residuals is more consistent in the transformed model compared to the original model, indicating that the transformed model is a better fit for the data.
+
+-   In a good model, the size of the residuals shouldn't change much as the fitted values change.
+
+### **Drawing diagnostic plots**
+
+It's time for you to draw these diagnostic plots yourself. Let's go back to the Taiwan real estate dataset and the model of house prices versus number of convenience stores.
+
+Recall that `autoplot()` lets you specify which diagnostic plots you are interested in.
+
+-   `1` residuals vs. fitted values
+
+-   `2` Q-Q plot
+
+-   `3` scale-location
+
+`mdl_price_vs_conv` is available, and `ggplot2` and `ggfortify` are loaded.
+
+-   Plot the three diagnostic plots (numbered `1` to `3`) for `mdl_price_vs_conv`. Use a layout of three rows and one column.
+
+```{r}
+library(fst) # to read fst format
+library(tidyverse)
+
+# data
+taiwan_real_estate <- read_fst(
+  "taiwan_real_estate.fst",
+  columns = NULL,
+  from = 1,
+  to = NULL,
+  as.data.table = FALSE,
+  old_format = FALSE
+)
+mdl_price_vs_conv <- lm(formula = price_twd_msq ~ n_convenience, data = taiwan_real_estate)
+```
+
+```{r}
+# Plot the three diagnostics for mdl_price_vs_conv
+autoplot(mdl_price_vs_conv,
+         which = 1:3,
+         nrow = 3,
+         ncol = 1)
+```
+
+# Outliers, leverage, and influence
+
+```{r}
+glimpse(fish)
+roach <- fish %>% 
+  dplyr::filter(Species == 3) %>% 
+  dplyr::select(Weight, Length1) %>% 
+  dplyr::rename(mass_g = Weight, length_cm = Length1)
+
+glimpse(roach)
+```
+
+```{r}
+rownames(roach) <- 1:nrow(roach)
+```
+
+```{r}
+ggplot(roach, aes(length_cm, mass_g)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+## Extreme explanatory values
+
+```{r}
+roach %>% 
+  dplyr::mutate(
+    has_extreme_length = length_cm < 15 | length_cm > 26
+  ) %>% 
+  ggplot(aes(length_cm, mass_g)) +
+  geom_point(aes(color = has_extreme_length)) +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+## Response values away from the regression line
+
+```{r}
+roach %>% 
+  dplyr::mutate(
+    has_extreme_length = length_cm < 15 | length_cm > 26,
+    has_extreme_mass = mass_g < 1
+  ) %>% 
+  ggplot(aes(length_cm, mass_g)) +
+  geom_point(aes(color = has_extreme_length,
+                 shape = has_extreme_mass)) +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+## Leverage
+
+*Leverege* is a measure of how extreme the explanatory variable values are.
+
+(**pt.** Alavanca)
+
+```{r}
+mdl_roach <- lm(mass_g ~ length_cm, data = roach)
+
+hatvalues(mdl_roach)
+```
+
+## The `.hat` column from `broom`
+
+```{r}
+library(broom)
+augment(mdl_roach)
+```
+
+## Highly leveraged roaches
+
+```{r}
+mdl_roach %>% 
+  augment() %>% 
+  select(mass_g, length_cm, leverage = .hat) %>% 
+  arrange(desc(leverage)) %>% 
+  head()
+```
+
+-   The first two observations are from a really long roach, and a really short roach, respectively.
+
+## Influence
+
+-   *Influence* measures how much the model would change if you left the observation out of the dataset when modeling.
+
+-   **Cook's distance** is the most common measure of influence.
+
+```{r}
+cooks.distance(mdl_roach)
+```
+
+-   In the `broom` library, we can find the cook's distance on the `cooksd` column:
+
+```{r}
+library(broom)
+augment(mdl_roach)
+```
+
+## Most influential roaches
+
+```{r}
+mdl_roach %>% 
+  augment() %>% 
+  dplyr::select(mass_g, length_cm, cooks_dist = .cooksd) %>% 
+  dplyr::arrange(desc(cooks_dist)) %>% 
+  head()
+```
+
+-   The three first observations show the more influential roaches
+
+    -   1: a really short roach
+
+    -   2: a really long roach
+
+    -   3: a zero mass roach (impossible)
+
+## Removing the most influential roach
+
+```{r}
+roach_not_short <- roach %>% 
+  dplyr::filter(length_cm != 12.9)
+```
+
+```{r}
+ggplot(roach, aes(length_cm, mass_g)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, data = roach_not_short,
+              color = "red")
+```
+
+## `autoplot()`
+
+```{r}
+autoplot(
+  mdl_roach,
+  which = 4:6,
+  nrow = 3,
+  ncol = 1
+)
+```
+
+## Exercises
+
+#### **Leverage**
+
+Leverage measures how unusual or extreme the explanatory variables are for each observation. Very roughly, a high leverage means that the explanatory variable has values that are different to other points in the dataset. In the case of simple linear regression, where there is only one explanatory value, this typically means values with a very high or very low explanatory value.
+
+Here, you'll look at highly leveraged values in the model of house price versus the square root of distance from the nearest MRT station in the Taiwan real estate dataset.
+
+Guess which observations you think will have a high leverage, then move the slider to find out.
+
+Which statement is true?
+
+a)  Observations with a large distance to the nearest MRT station have the highest leverage, because these points are furthest away from the linear regression trend line.
+
+b)  Observations with a large distance to the nearest MRT station have the highest leverage, because leverage is proportional to the explanatory variable.
+
+**c) Observations with a large distance to the nearest MRT station have the highest leverage, because most of the observations have a short distance, so long distances are more extreme.**
+
+d)  Observations with a high price have the highest leverage, because most of the observations have a low price, so high prices are most extreme.
+
+#### **Influence**
+
+*Influence* measures how much a model would change if each observation was left out of the model calculations, one at a time. That is, it measures how different the prediction line would look if you ran a linear regression on all data points except that point, compared to running a linear regression on the whole dataset.
+
+The standard metric for influence is *Cook's distance*, which calculates influence based on the size of the residual and the leverage of the point.
+
+Here you can see the same model as last time: house price versus the square root of distance from the nearest MRT station in the Taiwan real estate dataset.
+
+Guess which observations you think will have a high influence, then move the slider to find out.
+
+Which statement is true?
+
+-   **Observations with predictions far away from the trend line have high influence, because they have large residuals and are far away from other observations.**
+
+-   Observations with high prices have high influence, because influence is proportional to the response variable.
+
+-   Observations with predictions far away from the trend line have high influence, because the slope of the trend is negative.
+
+-   Observations with predictions far away from the trend line have high influence, because that increases the leverage of those points.
+
+### **Extracting leverage and influence**
+
+In the last few exercises you explored which observations had the highest leverage and influence. Now you'll extract those values from an augmented version of the model, and visualize them.
+
+`mdl_price_vs_dist` is available. `dplyr`, `ggplot2` and `ggfortify` are loaded.
+
+```{r}
+mdl_price_vs_dist <- lm(price_twd_msq ~ sqrt(dist_to_mrt_m),
+                        data = taiwan_real_estate)
+mdl_price_vs_dist
+```
+
+-   Augment `mdl_price_vs_dist`, then arrange observations by descending influence (`.hat`), and get the head of the results.
+
+```{r}
+mdl_price_vs_dist %>% 
+  # Augment the model
+  augment() %>% 
+  # Arrange rows by descending leverage
+  arrange(desc(.hat)) %>% 
+  # Get the head of the dataset
+  head()
+```
+
+-   Augment `mdl_price_vs_dist`, then arrange observations by descending influence (`.cooksd`), and get the head of the results.
+
+```{r}
+mdl_price_vs_dist %>% 
+  # Augment the model
+  augment() %>% 
+  # Arrange rows by descending Cook's distance
+  arrange(desc(.cooksd)) %>% 
+  # Get the head of the dataset
+  head()
+```
+
+-   Plot the three outlier diagnostic plots (numbered `4` to `6`) for `mdl_price_vs_dist`. Use a layout of three rows and one column.
+
+```{r}
+autoplot(
+  mdl_price_vs_dist,
+  which = 4:6,
+  nrow = 3,
+  ncol = 1
+)
+```
