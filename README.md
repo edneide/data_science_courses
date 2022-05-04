@@ -1,3 +1,4 @@
-# Data Science Courses
+# :computer: Data Science Studies
 
-Scripts criados durante os cursos de Data Science que venho fazendo. 
+Scripts from online courses and books as part of my studies in Data Science.
+
