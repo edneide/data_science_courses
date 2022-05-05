@@ -1,5 +1,5 @@
 ---
-title: "Ca[ítulo 2: Interações"
+title: "Capítulo 2: Interações"
 author: "Edneide Ramalho"
 date: "`r format(Sys.time(), '%d de %B de %Y')`"
 output:
