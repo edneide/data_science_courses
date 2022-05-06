@@ -10,6 +10,6 @@ Scripts from online courses and books as part of my studies in Data Science.
 ## In Python
 - 📘 **Book**: [`ml_guia_referencia`](https://github.com/edneide/data_science_studies/tree/main/ml_guia_referencia)
 - 👩‍💻 **Course**: [`supervised_learning_scikitlearn`](https://github.com/edneide/data_science_studies/tree/main/supervised_learning_scikitlearn)
-- 👩‍💻 **Course**: [`python_zero_a_ds`](https://github.com/edneide/data_science_studies/tree/main/python_zero_ao_ds)
+- 👩‍💻 **Course**: [`python_zero_ao_ds`](https://github.com/edneide/data_science_studies/tree/main/python_zero_ao_ds)
 
 
