@@ -11,5 +11,6 @@ Scripts from online courses and books as part of my studies in Data Science.
 - 📘 **Book**: [`ml_guia_referencia`](https://github.com/edneide/data_science_studies/tree/main/ml_guia_referencia)
 - 👩‍💻 **Course**: [`supervised_learning_scikitlearn`](https://github.com/edneide/data_science_studies/tree/main/supervised_learning_scikitlearn)
 - 👩‍💻 **Course**: [`python_zero_ao_ds`](https://github.com/edneide/data_science_studies/tree/main/python_zero_ao_ds)
+- 📝 **Project**: [`Predicting Credit Card Approvals`](https://github.com/edneide/data_science_studies/tree/main/Predicting%20Credit%20Card%20Approvals)
 
 
